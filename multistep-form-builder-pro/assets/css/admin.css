@@ -1,0 +1,106 @@
+.msfbp-builder {
+	margin-top: 20px;
+}
+
+.msfbp-builder.shell {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	padding: 12px;
+}
+
+.msfbp-layout {
+	display: grid;
+	grid-template-columns: 280px 1fr;
+	gap: 16px;
+}
+
+.msfbp-field-card {
+	background: #fff;
+	border: 1px solid #e2e4e7;
+	padding: 16px;
+	margin-bottom: 12px;
+}
+
+.msfbp-field-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.msfbp-field-header .msfbp-move button {
+	margin-left: 4px;
+}
+
+.msfbp-sidebar {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	padding: 12px;
+	height: max-content;
+}
+
+.msfbp-sidebar-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.msfbp-form-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.msfbp-form-list li {
+	padding: 10px;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	margin-bottom: 8px;
+	cursor: pointer;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.msfbp-form-list li.active {
+	border-color: #2563eb;
+	background: #eff6ff;
+}
+
+.msfbp-form-list .name {
+	font-weight: 600;
+}
+
+.msfbp-form-list .meta {
+	color: #64748b;
+}
+
+.msfbp-main {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	padding: 16px;
+}
+
+.msfbp-main-header {
+	display: grid;
+	grid-template-columns: 1fr 200px;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.msfbp-choice-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr auto;
+	gap: 8px;
+	align-items: center;
+}
+
+.msfbp-actions {
+	margin-top: 16px;
+	display: flex;
+	gap: 12px;
+}
