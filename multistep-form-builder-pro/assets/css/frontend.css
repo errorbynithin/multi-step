@@ -1,0 +1,35 @@
+.msfbp-form {
+	border: 1px solid #e5e7eb;
+	padding: 16px;
+	margin: 12px 0;
+}
+
+.msfbp-field {
+	margin-bottom: 12px;
+}
+
+.msfbp-field label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.msfbp-required {
+	color: #c53030;
+	margin-left: 4px;
+}
+
+.msfbp-progress {
+	margin-bottom: 12px;
+	font-weight: 600;
+}
+
+.msfbp-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.msfbp-hp {
+	position: absolute;
+	left: -9999px;
+}

@@ -1,0 +1,34 @@
+.msfbp-builder {
+	margin-top: 20px;
+}
+
+.msfbp-field-card {
+	background: #fff;
+	border: 1px solid #e2e4e7;
+	padding: 16px;
+	margin-bottom: 12px;
+}
+
+.msfbp-field-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.msfbp-field-header .msfbp-move button {
+	margin-left: 4px;
+}
+
+.msfbp-choice-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr auto;
+	gap: 8px;
+	align-items: center;
+}
+
+.msfbp-actions {
+	margin-top: 16px;
+	display: flex;
+	gap: 12px;
+}

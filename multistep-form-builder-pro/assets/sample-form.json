@@ -1,0 +1,100 @@
+{
+  "id": 0,
+  "name": "Sample Multi-Step Form",
+  "status": "active",
+  "settings": {
+    "progress": "steps",
+    "notifications": [
+      {
+        "to": "{field:email}",
+        "subject": "Thanks for submitting",
+        "message": "Hi {field:name}, thanks for your entry. Entry #{entry_id}",
+        "conditional": {
+          "relation": "all",
+          "rules": []
+        }
+      }
+    ]
+  },
+  "fields": [
+    {
+      "id": 1,
+      "form_id": 0,
+      "page_index": 0,
+      "type": "text",
+      "label": "Name",
+      "slug": "name",
+      "required": true,
+      "settings": {
+        "validation": {}
+      },
+      "ordering": 0
+    },
+    {
+      "id": 2,
+      "form_id": 0,
+      "page_index": 0,
+      "type": "email",
+      "label": "Email",
+      "slug": "email",
+      "required": true,
+      "settings": {
+        "validation": {}
+      },
+      "ordering": 1
+    },
+    {
+      "id": 3,
+      "form_id": 0,
+      "page_index": 0,
+      "type": "page_break",
+      "label": "Page Break",
+      "slug": "page_break_1",
+      "required": false,
+      "settings": {},
+      "ordering": 2
+    },
+    {
+      "id": 4,
+      "form_id": 0,
+      "page_index": 1,
+      "type": "select",
+      "label": "Service",
+      "slug": "service",
+      "required": false,
+      "settings": {
+        "choices": [
+          { "label": "Consulting", "value": "consulting" },
+          { "label": "Support", "value": "support" }
+        ]
+      },
+      "ordering": 3
+    },
+    {
+      "id": 5,
+      "form_id": 0,
+      "page_index": 1,
+      "type": "number",
+      "label": "Quantity",
+      "slug": "quantity",
+      "required": false,
+      "settings": {
+        "validation": { "min": 1, "max": 10 }
+      },
+      "ordering": 4
+    },
+    {
+      "id": 6,
+      "form_id": 0,
+      "page_index": 1,
+      "type": "calculation",
+      "label": "Total",
+      "slug": "total",
+      "required": false,
+      "settings": {
+        "formula": "{field:quantity}*10"
+      },
+      "ordering": 5
+    }
+  ]
+}
