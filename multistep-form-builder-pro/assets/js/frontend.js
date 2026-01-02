@@ -1,39 +1,43 @@
 /* global wp */
 ( function () {
 	function initForm( wrapper ) {
-		const formData = JSON.parse( wrapper.dataset.form );
 		const formEl = wrapper.querySelector( '.msfbp-form-el' );
-		const pages = [];
+		const pages = Array.from( wrapper.querySelectorAll( '.msfbp-step-content' ) );
+		const steps = Array.from( wrapper.querySelectorAll( '.msfbp-step' ) );
 		let currentPage = 0;
 
-		formEl.querySelectorAll( '.msfbp-field' ).forEach( ( field ) => {
-			const page = parseInt( field.dataset.page, 10 ) || 0;
-			pages[ page ] = pages[ page ] || [];
-			pages[ page ].push( field );
-		} );
-
 		function updateProgress() {
-			const progress = wrapper.querySelector( '.msfbp-progress' );
-			if ( ! progress ) return;
+			const bar = wrapper.querySelector( '.msfbp-progress-fill' );
+			if ( ! bar ) return;
 			const percent = Math.round( ( ( currentPage + 1 ) / pages.length ) * 100 );
-			progress.innerHTML = 'Step ' + ( currentPage + 1 ) + ' of ' + pages.length + ' (' + percent + '%)';
+			bar.style.width = percent + '%';
 		}
 
 		function showPage( index ) {
 			currentPage = index;
-			pages.forEach( ( fields, idx ) => {
-				fields.forEach( ( field ) => {
-					field.style.display = idx === currentPage ? 'block' : 'none';
-				} );
+			pages.forEach( ( page, idx ) => {
+				if ( idx === currentPage ) {
+					page.classList.remove( 'hidden' );
+				} else {
+					page.classList.add( 'hidden' );
+				}
+			} );
+			steps.forEach( ( step, idx ) => {
+				step.classList.remove( 'active', 'completed' );
+				if ( idx === currentPage ) {
+					step.classList.add( 'active' );
+				} else if ( idx < currentPage ) {
+					step.classList.add( 'completed' );
+				}
 			} );
 			updateProgress();
 		}
 
 		function validateCurrentPage() {
 			let valid = true;
-			pages[ currentPage ].forEach( ( field ) => {
-				const input = field.querySelector( 'input, select, textarea' );
-				if ( input && ! input.checkValidity() ) {
+			const inputs = pages[ currentPage ].querySelectorAll( 'input, select, textarea' );
+			inputs.forEach( ( input ) => {
+				if ( ! input.checkValidity() ) {
 					valid = false;
 					input.reportValidity();
 				}
@@ -87,15 +91,28 @@
 		}
 
 		formEl.addEventListener( 'change', evaluateConditionals );
-		wrapper.querySelector( '.msfbp-next' ).addEventListener( 'click', function () {
-			if ( validateCurrentPage() && currentPage < pages.length - 1 ) {
-				showPage( currentPage + 1 );
-			}
+		wrapper.querySelectorAll( '.msfbp-next' ).forEach( ( btn ) => {
+			btn.addEventListener( 'click', function () {
+				if ( validateCurrentPage() && currentPage < pages.length - 1 ) {
+					showPage( currentPage + 1 );
+				}
+			} );
 		} );
-		wrapper.querySelector( '.msfbp-prev' ).addEventListener( 'click', function () {
-			if ( currentPage > 0 ) {
-				showPage( currentPage - 1 );
-			}
+		wrapper.querySelectorAll( '.msfbp-prev' ).forEach( ( btn ) => {
+			btn.addEventListener( 'click', function () {
+				if ( currentPage > 0 ) {
+					showPage( currentPage - 1 );
+				}
+			} );
+		} );
+
+		steps.forEach( ( step ) => {
+			step.addEventListener( 'click', function () {
+				const idx = parseInt( step.dataset.step, 10 );
+				if ( idx <= currentPage ) {
+					showPage( idx );
+				}
+			} );
 		} );
 
 		formEl.querySelectorAll( '.msfbp-add-row' ).forEach( function ( button ) {

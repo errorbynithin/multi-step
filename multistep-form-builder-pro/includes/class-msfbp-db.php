@@ -107,6 +107,18 @@ class MSFBP_DB {
 	}
 
 	/**
+	 * List forms (for admin).
+	 */
+	public function list_forms() {
+		global $wpdb;
+
+		return $wpdb->get_results(
+			'SELECT id, name, status, updated_at FROM ' . msfbp_table( 'forms' ) . ' ORDER BY updated_at DESC',
+			ARRAY_A
+		);
+	}
+
+	/**
 	 * Store entry and values.
 	 */
 	public function insert_entry( $form_id, $fields, $values, $meta = array() ) {

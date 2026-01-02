@@ -38,6 +38,18 @@ class MSFBP_REST {
 			'msfbp/v1',
 			'/forms',
 			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'permission_callback' => function() {
+					return current_user_can( 'manage_options' );
+				},
+				'callback'            => array( $this, 'list_forms' ),
+			)
+		);
+
+		register_rest_route(
+			'msfbp/v1',
+			'/forms',
+			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'permission_callback' => function() {
 					return current_user_can( 'manage_options' );
@@ -139,6 +151,14 @@ class MSFBP_REST {
 		$id     = $db->save_form( $params );
 
 		return rest_ensure_response( array( 'id' => $id ) );
+	}
+
+	/**
+	 * List forms.
+	 */
+	public function list_forms() {
+		$db = new MSFBP_DB();
+		return rest_ensure_response( $db->list_forms() );
 	}
 
 	/**

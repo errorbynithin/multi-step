@@ -1,6 +1,6 @@
 /* global wp, MSFBP_Admin */
 ( function ( wp, apiFetch ) {
-	const { createElement: el, render, useState } = wp.element;
+	const { createElement: el, render, useState, useEffect } = wp.element;
 	const { Button, TextControl, PanelBody, SelectControl, CheckboxControl, Modal, TextareaControl, Notice } = wp.components;
 
 	const fieldTypes = [
@@ -308,16 +308,45 @@
 
 	const BuilderApp = () => {
 		const sample = MSFBP_Admin.sample || {};
-		const baseForm = {
-			id: sample.id || 0,
-			name: sample.name || 'Untitled Form',
-			status: sample.status || 'draft',
+		const blankForm = () => ( {
+			id: 0,
+			name: 'Untitled Form',
+			status: 'draft',
 			settings: sample.settings || {},
 			fields: sample.fields || [],
+		} );
+
+		const [ form, setForm ] = useState( blankForm() );
+		const [ notice, setNotice ] = useState( '' );
+		const [ forms, setForms ] = useState( [] );
+		const [ loading, setLoading ] = useState( true );
+
+		const fetchForms = () => {
+			apiFetch( {
+				url: MSFBP_Admin.restUrl + '/forms',
+				method: 'GET',
+				headers: { 'X-WP-Nonce': MSFBP_Admin.restNonce },
+			} ).then( function ( res ) {
+				setForms( res || [] );
+				setLoading( false );
+			} ).catch( function () {
+				setLoading( false );
+			} );
 		};
 
-		const [ form, setForm ] = useState( baseForm );
-		const [ notice, setNotice ] = useState( '' );
+		const loadForm = ( id ) => {
+			if ( ! id ) {
+				setForm( blankForm() );
+				return;
+			}
+			apiFetch( {
+				url: MSFBP_Admin.restUrl + '/forms/' + id,
+				method: 'GET',
+				headers: { 'X-WP-Nonce': MSFBP_Admin.restNonce },
+			} ).then( function ( res ) {
+				setForm( res || blankForm() );
+			} );
+		};
 
 		const addField = () => setForm( Object.assign( {}, form, { fields: form.fields.concat( [ defaultField() ] ) } ) );
 		const save = () => {
@@ -329,66 +358,122 @@
 			} ).then( function ( res ) {
 				setForm( Object.assign( {}, form, { id: res.id } ) );
 				setNotice( 'Form saved.' );
+				fetchForms();
 			} ).catch( function () {
 				setNotice( 'Error saving form.' );
 			} );
 		};
 
+		useEffect( function () {
+			fetchForms();
+		}, [] );
+
 		return el(
 			'div',
-			{ className: 'msfbp-builder' },
+			{ className: 'msfbp-builder shell' },
 			notice &&
 				el( Notice, { status: 'success', onRemove: function () { setNotice( '' ); } }, notice ),
-			el( TextControl, {
-				label: 'Form Name',
-				value: form.name,
-				onChange: function ( v ) {
-					setForm( Object.assign( {}, form, { name: v } ) );
-				},
-			} ),
 			el(
 				'div',
-				{ className: 'msfbp-fields' },
-				form.fields.map( function ( field, idx ) {
-					return el( FieldEditor, {
-						key: field.id,
-						field: field,
-						onChange: function ( updated ) {
-							const next = form.fields.slice();
-							next[ idx ] = updated;
-							setForm( Object.assign( {}, form, { fields: next } ) );
-						},
-						onRemove: function () {
-							setForm( Object.assign( {}, form, { fields: form.fields.filter( function ( f ) { return f.id !== field.id; } ) } ) );
-						},
-						onMoveUp: function () {
-							if ( idx === 0 ) {
-								return;
-							}
-							const next = form.fields.slice();
-							const tmp = next[ idx - 1 ];
-							next[ idx - 1 ] = next[ idx ];
-							next[ idx ] = tmp;
-							setForm( Object.assign( {}, form, { fields: next } ) );
-						},
-						onMoveDown: function () {
-							if ( idx === form.fields.length - 1 ) {
-								return;
-							}
-							const next = form.fields.slice();
-							const tmp = next[ idx + 1 ];
-							next[ idx + 1 ] = next[ idx ];
-							next[ idx ] = tmp;
-							setForm( Object.assign( {}, form, { fields: next } ) );
-						},
-					} );
-				} )
-			),
-			el(
-				'div',
-				{ className: 'msfbp-actions' },
-				el( Button, { isSecondary: true, onClick: addField }, 'Add Field' ),
-				el( Button, { isPrimary: true, onClick: save }, 'Save Form' )
+				{ className: 'msfbp-layout' },
+				el(
+					'div',
+					{ className: 'msfbp-sidebar' },
+					el(
+						'div',
+						{ className: 'msfbp-sidebar-header' },
+						el( 'h2', null, 'Your Forms' ),
+						el( Button, { isPrimary: true, onClick: function () { setForm( blankForm() ); } }, 'New Form' )
+					),
+					loading && el( 'p', null, 'Loading…' ),
+					! loading && forms.length === 0 && el( 'p', null, 'No forms yet. Create one!' ),
+					el(
+						'ul',
+						{ className: 'msfbp-form-list' },
+						forms.map( function ( item ) {
+							return el(
+								'li',
+								{
+									key: item.id,
+									className: item.id === form.id ? 'active' : '',
+									onClick: function () { loadForm( item.id ); },
+								},
+								el( 'span', { className: 'name' }, item.name ),
+								el( 'span', { className: 'meta' }, item.status )
+							);
+						} )
+					)
+				),
+				el(
+					'div',
+					{ className: 'msfbp-main' },
+					el(
+						'div',
+						{ className: 'msfbp-main-header' },
+						el( TextControl, {
+							label: 'Form Name',
+							value: form.name,
+							onChange: function ( v ) {
+								setForm( Object.assign( {}, form, { name: v } ) );
+							},
+						} ),
+						el( SelectControl, {
+							label: 'Status',
+							value: form.status,
+							options: [
+								{ label: 'Draft', value: 'draft' },
+								{ label: 'Active', value: 'active' },
+							],
+							onChange: function ( v ) {
+								setForm( Object.assign( {}, form, { status: v } ) );
+							},
+						} )
+					),
+					el(
+						'div',
+						{ className: 'msfbp-fields' },
+						form.fields.map( function ( field, idx ) {
+							return el( FieldEditor, {
+								key: field.id,
+								field: field,
+								onChange: function ( updated ) {
+									const next = form.fields.slice();
+									next[ idx ] = updated;
+									setForm( Object.assign( {}, form, { fields: next } ) );
+								},
+								onRemove: function () {
+									setForm( Object.assign( {}, form, { fields: form.fields.filter( function ( f ) { return f.id !== field.id; } ) } ) );
+								},
+								onMoveUp: function () {
+									if ( idx === 0 ) {
+										return;
+									}
+									const next = form.fields.slice();
+									const tmp = next[ idx - 1 ];
+									next[ idx - 1 ] = next[ idx ];
+									next[ idx ] = tmp;
+									setForm( Object.assign( {}, form, { fields: next } ) );
+								},
+								onMoveDown: function () {
+									if ( idx === form.fields.length - 1 ) {
+										return;
+									}
+									const next = form.fields.slice();
+									const tmp = next[ idx + 1 ];
+									next[ idx + 1 ] = next[ idx ];
+									next[ idx ] = tmp;
+									setForm( Object.assign( {}, form, { fields: next } ) );
+								},
+							} );
+						} )
+					),
+					el(
+						'div',
+						{ className: 'msfbp-actions' },
+						el( Button, { isSecondary: true, onClick: addField }, 'Add Field' ),
+						el( Button, { isPrimary: true, onClick: save }, 'Save Form' )
+					)
+				)
 			)
 		);
 	};

@@ -43,21 +43,50 @@ class MSFBP_Render {
 			return '';
 		}
 
+		$pages = $this->build_pages( $form['fields'] );
+
 		ob_start();
 		wp_nonce_field( 'msfbp_submit_' . $form_id, '_msfbp_nonce' );
 		?>
-		<div class="msfbp-form" data-form="<?php echo esc_attr( wp_json_encode( $form ) ); ?>" data-form-id="<?php echo esc_attr( $form_id ); ?>">
-			<div class="msfbp-progress" aria-live="polite"></div>
-			<form class="msfbp-form-el" method="post" enctype="multipart/form-data">
-				<input type="hidden" name="msfbp_form_id" value="<?php echo esc_attr( $form_id ); ?>" />
-				<input type="text" name="msfbp_hp" class="msfbp-hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
-				<?php echo $this->render_fields( $form['fields'] ); ?>
-				<div class="msfbp-actions">
-					<button type="button" class="msfbp-prev"><?php esc_html_e( 'Previous', 'msfbp' ); ?></button>
-					<button type="button" class="msfbp-next"><?php esc_html_e( 'Next', 'msfbp' ); ?></button>
-					<button type="submit" class="msfbp-submit"><?php esc_html_e( 'Submit', 'msfbp' ); ?></button>
+		<div class="msfbp-modern" data-form-id="<?php echo esc_attr( $form_id ); ?>">
+			<div class="msfbp-progress-bar"><div class="msfbp-progress-fill"></div></div>
+			<div class="msfbp-container">
+				<div class="msfbp-sidebar">
+					<?php foreach ( $pages as $index => $page ) : ?>
+						<div class="msfbp-step<?php echo 0 === $index ? ' active' : ''; ?>" data-step="<?php echo esc_attr( $index ); ?>">
+							<div class="step-number"><?php echo esc_html( $index + 1 ); ?></div>
+							<div class="step-label"><?php echo esc_html( $page['title'] ); ?></div>
+						</div>
+					<?php endforeach; ?>
 				</div>
-			</form>
+				<div class="msfbp-content">
+					<form class="msfbp-form-el" method="post" enctype="multipart/form-data" novalidate>
+						<input type="hidden" name="msfbp_form_id" value="<?php echo esc_attr( $form_id ); ?>" />
+						<input type="text" name="msfbp_hp" class="msfbp-hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+						<?php foreach ( $pages as $index => $page ) : ?>
+							<div class="msfbp-step-content<?php echo 0 === $index ? '' : ' hidden'; ?>" data-step="<?php echo esc_attr( $index ); ?>">
+								<div class="step-header">
+									<div class="step-indicator"><?php printf( esc_html__( 'Step %1$d of %2$d', 'msfbp' ), $index + 1, count( $pages ) ); ?></div>
+									<h2 class="step-title"><?php echo esc_html( $page['title'] ); ?></h2>
+								</div>
+								<div class="msfbp-fields">
+									<?php foreach ( $page['fields'] as $field ) : ?>
+										<?php echo $this->render_field( $field ); ?>
+									<?php endforeach; ?>
+								</div>
+								<div class="msfbp-actions">
+									<button type="button" class="btn msfbp-prev"<?php echo 0 === $index ? ' disabled' : ''; ?>><?php esc_html_e( 'Previous', 'msfbp' ); ?></button>
+									<?php if ( ( $index + 1 ) === count( $pages ) ) : ?>
+										<button type="submit" class="btn primary msfbp-submit"><?php esc_html_e( 'Submit', 'msfbp' ); ?></button>
+									<?php else : ?>
+										<button type="button" class="btn primary msfbp-next"><?php esc_html_e( 'Next', 'msfbp' ); ?></button>
+									<?php endif; ?>
+								</div>
+							</div>
+						<?php endforeach; ?>
+					</form>
+				</div>
+			</div>
 			<div class="msfbp-messages" aria-live="polite"></div>
 		</div>
 		<?php
@@ -65,31 +94,55 @@ class MSFBP_Render {
 	}
 
 	/**
-	 * Render fields recursively.
+	 * Split fields into pages.
 	 */
-	private function render_fields( $fields ) {
-		$output     = '';
-		$page_index = 0;
+	private function build_pages( $fields ) {
+		$pages    = array();
+		$page     = array(
+			'title'  => __( 'Step 1', 'msfbp' ),
+			'index'  => 0,
+			'fields' => array(),
+		);
+		$counter  = 1;
 		foreach ( $fields as $field ) {
 			if ( 'page_break' === $field['type'] ) {
-				$page_index++;
-				$output .= '<div class="msfbp-page-break" data-page="' . esc_attr( $page_index ) . '"></div>';
+				$pages[] = $page;
+				$counter++;
+				$page = array(
+					'title'  => ! empty( $field['label'] ) ? $field['label'] : sprintf( __( 'Step %d', 'msfbp' ), $counter ),
+					'index'  => $counter - 1,
+					'fields' => array(),
+				);
 				continue;
 			}
-
-			$conditional = isset( $field['settings']['conditional'] ) ? ' data-conditional="' . esc_attr( wp_json_encode( $field['settings']['conditional'] ) ) . '"' : '';
-			$output     .= '<div class="msfbp-field" data-type="' . esc_attr( $field['type'] ) . '" data-page="' . esc_attr( $page_index ) . '"' . $conditional . '>';
-			$output     .= '<label for="msfbp_' . esc_attr( $field['slug'] ) . '">' . esc_html( $field['label'] );
-			if ( ! empty( $field['required'] ) ) {
-				$output .= '<span class="msfbp-required">*</span>';
-			}
-			$output .= '</label>';
-
-			$output .= $this->render_input( $field );
-			$output .= '</div>';
+			$page['fields'][] = $field;
 		}
 
-		return $output;
+		$pages[] = $page;
+		return $pages;
+	}
+
+	/**
+	 * Render a single field block.
+	 */
+	private function render_field( $field ) {
+		$slug        = esc_attr( $field['slug'] );
+		$type        = $field['type'];
+		$conditional = isset( $field['settings']['conditional'] ) ? ' data-conditional="' . esc_attr( wp_json_encode( $field['settings']['conditional'] ) ) . '"' : '';
+		$html        = '<div class="msfbp-field" data-type="' . esc_attr( $type ) . '"' . $conditional . '>';
+
+		if ( ! in_array( $type, array( 'html', 'hidden', 'calculation' ), true ) ) {
+			$html .= '<label for="msfbp_' . $slug . '">' . esc_html( $field['label'] );
+			if ( ! empty( $field['required'] ) ) {
+				$html .= '<span class="msfbp-required">*</span>';
+			}
+			$html .= '</label>';
+		}
+
+		$html .= $this->render_input( $field );
+		$html .= '</div>';
+
+		return $html;
 	}
 
 	/**
