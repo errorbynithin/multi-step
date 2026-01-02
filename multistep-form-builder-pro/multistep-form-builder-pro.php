@@ -25,6 +25,7 @@ require_once MSFBP_PLUGIN_DIR . 'includes/class-msfbp-validator.php';
 require_once MSFBP_PLUGIN_DIR . 'includes/class-msfbp-notifications.php';
 require_once MSFBP_PLUGIN_DIR . 'includes/class-msfbp-render.php';
 require_once MSFBP_PLUGIN_DIR . 'includes/class-msfbp-admin.php';
+require_once MSFBP_PLUGIN_DIR . 'includes/class-msfbp-settings.php';
 require_once MSFBP_PLUGIN_DIR . 'includes/class-msfbp-rest.php';
 require_once MSFBP_PLUGIN_DIR . 'includes/class-msfbp-entries.php';
 require_once MSFBP_PLUGIN_DIR . 'includes/class-msfbp-seeder.php';

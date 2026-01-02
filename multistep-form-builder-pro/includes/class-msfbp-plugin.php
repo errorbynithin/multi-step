@@ -18,6 +18,7 @@ class MSFBP_Plugin {
 	private $rest;
 	private $render;
 	private $entries;
+	private $settings;
 	private $rate_limit_window = 60;
 	private $rate_limit_count  = 5;
 
@@ -26,6 +27,7 @@ class MSFBP_Plugin {
 	 */
 	public function __construct() {
 		$this->admin   = new MSFBP_Admin();
+		$this->settings = new MSFBP_Settings();
 		$this->rest    = new MSFBP_REST();
 		$this->render  = new MSFBP_Render();
 		$this->entries = new MSFBP_Entries();
@@ -36,6 +38,7 @@ class MSFBP_Plugin {
 	 */
 	public function run() {
 		$this->admin->hooks();
+		$this->settings->hooks();
 		$this->rest->hooks();
 		$this->render->hooks();
 		$this->entries->hooks();
