@@ -52,7 +52,8 @@ class MSFBP_Admin {
 			array(
 				'nonce'     => wp_create_nonce( 'msfbp_admin' ),
 				'restNonce' => wp_create_nonce( 'wp_rest' ),
-				'restUrl'   => esc_url_raw( rest_url( 'msfbp/v1' ) ),
+				'restUrl'   => untrailingslashit( esc_url_raw( rest_url( 'msfbp/v1' ) ) ),
+				'sample'    => json_decode( file_get_contents( MSFBP_PLUGIN_DIR . 'assets/sample-form.json' ), true ),
 			)
 		);
 	}
@@ -64,7 +65,7 @@ class MSFBP_Admin {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'MultiStep Form Builder Pro', 'msfbp' ); ?></h1>
-			<div id="msfbp-builder-root" data-form-template="<?php echo esc_attr( file_get_contents( MSFBP_PLUGIN_DIR . 'assets/sample-form.json' ) ); ?>"></div>
+			<div id="msfbp-builder-root"></div>
 		</div>
 		<?php
 	}

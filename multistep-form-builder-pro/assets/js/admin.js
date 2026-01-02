@@ -1,6 +1,6 @@
 /* global wp, MSFBP_Admin */
 ( function ( wp, apiFetch ) {
-	const { render, useState } = wp.element;
+	const { createElement: el, render, useState } = wp.element;
 	const { Button, TextControl, PanelBody, SelectControl, CheckboxControl, Modal, TextareaControl, Notice } = wp.components;
 
 	const fieldTypes = [
@@ -53,206 +53,350 @@
 			onApply( choices );
 		};
 
-		if ( ! isOpen ) return null;
-		return (
-			<Modal title="Bulk Add Choices" onRequestClose={ onClose }>
-				<TextareaControl
-					label="Enter one per line (Label|Value or Label)"
-					value={ text }
-					onChange={ setText }
-					rows={ 8 }
-				/>
-				<div className="msfbp-modal-actions">
-					<Button isSecondary onClick={ onClose }>Cancel</Button>
-					<Button isPrimary onClick={ parse }>Apply</Button>
-				</div>
-			</Modal>
+		if ( ! isOpen ) {
+			return null;
+		}
+
+		return el(
+			Modal,
+			{ title: 'Bulk Add Choices', onRequestClose: onClose },
+			el( TextareaControl, {
+				label: 'Enter one per line (Label|Value or Label)',
+				value: text,
+				onChange: setText,
+				rows: 8,
+			} ),
+			el(
+				'div',
+				{ className: 'msfbp-modal-actions' },
+				el( Button, { isSecondary: true, onClick: onClose }, 'Cancel' ),
+				el( Button, { isPrimary: true, onClick: parse }, 'Apply' )
+			)
 		);
 	};
 
 	const ConditionalBuilder = ( { value, onChange } ) => {
-		const relation = value?.relation || 'all';
-		const rules = value?.rules || [];
+		const relation = ( value && value.relation ) || 'all';
+		const rules = ( value && value.rules ) || [];
+
 		const updateRule = ( index, key, val ) => {
-			const next = [ ...rules ];
-			next[ index ] = { ...next[ index ], [ key ]: val };
-			onChange( { relation, rules: next } );
+			const next = rules.slice();
+			next[ index ] = Object.assign( {}, next[ index ], { [ key ]: val } );
+			onChange( { relation: relation, rules: next } );
 		};
 
-		return (
-			<PanelBody title="Conditional Logic" initialOpen={ false }>
-				<SelectControl
-					label="Show field if"
-					value={ relation }
-					options={ [
-						{ label: 'All conditions match', value: 'all' },
-						{ label: 'Any condition matches', value: 'any' },
-					] }
-					onChange={ ( val ) => onChange( { relation: val, rules } ) }
-				/>
-				{ rules.map( ( rule, idx ) => (
-					<div key={ idx } className="msfbp-rule">
-						<TextControl label="Field Slug" value={ rule.field } onChange={ ( v ) => updateRule( idx, 'field', v ) } />
-						<SelectControl
-							label="Operator"
-							value={ rule.operator }
-							options={ [
-								{ label: 'Is', value: 'is' },
-								{ label: 'Is Not', value: 'is_not' },
-								{ label: 'Contains', value: 'contains' },
-								{ label: 'Greater Than', value: 'greater' },
-								{ label: 'Less Than', value: 'less' },
-							] }
-							onChange={ ( v ) => updateRule( idx, 'operator', v ) }
-						/>
-						<TextControl label="Value" value={ rule.value || '' } onChange={ ( v ) => updateRule( idx, 'value', v ) } />
-						<Button isLink isDestructive onClick={ () => onChange( { relation, rules: rules.filter( ( r, i ) => i !== idx ) } ) }>Remove</Button>
-					</div>
-				) ) }
-				<Button isSecondary onClick={ () => onChange( { relation, rules: [ ...rules, { field: '', operator: 'is', value: '' } ] } ) }>Add Condition</Button>
-			</PanelBody>
+		return el(
+			PanelBody,
+			{ title: 'Conditional Logic', initialOpen: false },
+			el( SelectControl, {
+				label: 'Show field if',
+				value: relation,
+				options: [
+					{ label: 'All conditions match', value: 'all' },
+					{ label: 'Any condition matches', value: 'any' },
+				],
+				onChange: function ( val ) {
+					onChange( { relation: val, rules: rules } );
+				},
+			} ),
+			rules.map( function ( rule, idx ) {
+				return el(
+					'div',
+					{ key: idx, className: 'msfbp-rule' },
+					el( TextControl, {
+						label: 'Field Slug',
+						value: rule.field,
+						onChange: function ( v ) {
+							updateRule( idx, 'field', v );
+						},
+					} ),
+					el( SelectControl, {
+						label: 'Operator',
+						value: rule.operator,
+						options: [
+							{ label: 'Is', value: 'is' },
+							{ label: 'Is Not', value: 'is_not' },
+							{ label: 'Contains', value: 'contains' },
+							{ label: 'Greater Than', value: 'greater' },
+							{ label: 'Less Than', value: 'less' },
+						],
+						onChange: function ( v ) {
+							updateRule( idx, 'operator', v );
+						},
+					} ),
+					el( TextControl, {
+						label: 'Value',
+						value: rule.value || '',
+						onChange: function ( v ) {
+							updateRule( idx, 'value', v );
+						},
+					} ),
+					el(
+						Button,
+						{
+							isLink: true,
+							isDestructive: true,
+							onClick: function () {
+								onChange( {
+									relation: relation,
+									rules: rules.filter( function ( r, i ) {
+										return i !== idx;
+									} ),
+								} );
+							},
+						},
+						'Remove'
+					)
+				);
+			} ),
+			el(
+				Button,
+				{
+					isSecondary: true,
+					onClick: function () {
+						onChange( {
+							relation: relation,
+							rules: rules.concat( [ { field: '', operator: 'is', value: '' } ] ),
+						} );
+					},
+				},
+				'Add Condition'
+			)
 		);
 	};
 
 	const FieldEditor = ( { field, onChange, onRemove, onMoveUp, onMoveDown } ) => {
 		const [ bulkOpen, setBulkOpen ] = useState( false );
-		const update = ( key, val ) => onChange( { ...field, [ key ]: val } );
-		const updateSettings = ( key, val ) => update( 'settings', { ...field.settings, [ key ]: val } );
-		return (
-			<div className="msfbp-field-card">
-				<div className="msfbp-field-header">
-					<strong>{ field.label }</strong>
-					<Button isLink isDestructive onClick={ onRemove }>Delete</Button>
-					<div className="msfbp-move">
-						<Button isSecondary onClick={ onMoveUp } icon="arrow-up-alt2" />
-						<Button isSecondary onClick={ onMoveDown } icon="arrow-down-alt2" />
-					</div>
-				</div>
-				<TextControl label="Label" value={ field.label } onChange={ ( v ) => update( 'label', v ) } />
-				<TextControl label="Slug" value={ field.slug } onChange={ ( v ) => update( 'slug', v ) } />
-				<SelectControl label="Type" value={ field.type } options={ fieldTypes } onChange={ ( v ) => update( 'type', v ) } />
-				<CheckboxControl label="Required" checked={ field.required } onChange={ ( v ) => update( 'required', v ) } />
+		const update = ( key, val ) => onChange( Object.assign( {}, field, { [ key ]: val } ) );
+		const updateSettings = ( key, val ) => update( 'settings', Object.assign( {}, field.settings, { [ key ]: val } ) );
 
-				{ [ 'select', 'multi-select', 'radio', 'checkbox' ].includes( field.type ) && (
-					<PanelBody title="Choices" initialOpen={ true }>
-						<Button isSecondary onClick={ () => setBulkOpen( true ) }>Bulk Add</Button>
-						{ field.settings.choices.map( ( choice, idx ) => (
-							<div key={ idx } className="msfbp-choice-row">
-								<TextControl
-									label="Label"
-									value={ choice.label }
-									onChange={ ( v ) => {
-										const choices = [ ...field.settings.choices ];
-										choices[ idx ] = { ...choices[ idx ], label: v };
-										updateSettings( 'choices', choices );
-									} }
-								/>
-								<TextControl
-									label="Value"
-									value={ choice.value }
-									onChange={ ( v ) => {
-										const choices = [ ...field.settings.choices ];
-										choices[ idx ] = { ...choices[ idx ], value: v };
-										updateSettings( 'choices', choices );
-									} }
-								/>
-								<Button isLink isDestructive onClick={ () => updateSettings( 'choices', field.settings.choices.filter( ( c, i ) => i !== idx ) ) }>Remove</Button>
-							</div>
-						) ) }
-						<Button isSecondary onClick={ () => updateSettings( 'choices', [ ...field.settings.choices, { label: 'Option', value: 'option' } ] ) }>Add Choice</Button>
-					</PanelBody>
-				) }
-
-				{ field.type === 'calculation' && (
-					<TextareaControl
-						label="Formula (use {field:slug} tokens)"
-						value={ field.settings.formula || '' }
-						onChange={ ( v ) => updateSettings( 'formula', v ) }
-					/>
-				) }
-
-				<ConditionalBuilder value={ field.settings.conditional } onChange={ ( val ) => updateSettings( 'conditional', val ) } />
-				<ChoiceBulkModal
-					isOpen={ bulkOpen }
-					onClose={ () => setBulkOpen( false ) }
-					onApply={ ( choices ) => {
-						updateSettings( 'choices', choices );
-						setBulkOpen( false );
-					} }
-				/>
-			</div>
+		return el(
+			'div',
+			{ className: 'msfbp-field-card' },
+			el(
+				'div',
+				{ className: 'msfbp-field-header' },
+				el( 'strong', null, field.label ),
+				el(
+					Button,
+					{ isLink: true, isDestructive: true, onClick: onRemove },
+					'Delete'
+				),
+				el(
+					'div',
+					{ className: 'msfbp-move' },
+					el( Button, { isSecondary: true, onClick: onMoveUp, icon: 'arrow-up-alt2' } ),
+					el( Button, { isSecondary: true, onClick: onMoveDown, icon: 'arrow-down-alt2' } )
+				)
+			),
+			el( TextControl, {
+				label: 'Label',
+				value: field.label,
+				onChange: function ( v ) {
+					update( 'label', v );
+				},
+			} ),
+			el( TextControl, {
+				label: 'Slug',
+				value: field.slug,
+				onChange: function ( v ) {
+					update( 'slug', v );
+				},
+			} ),
+			el( SelectControl, {
+				label: 'Type',
+				value: field.type,
+				options: fieldTypes,
+				onChange: function ( v ) {
+					update( 'type', v );
+				},
+			} ),
+			el( CheckboxControl, {
+				label: 'Required',
+				checked: field.required,
+				onChange: function ( v ) {
+					update( 'required', v );
+				},
+			} ),
+			[ 'select', 'multi-select', 'radio', 'checkbox' ].indexOf( field.type ) > -1 &&
+				el(
+					PanelBody,
+					{ title: 'Choices', initialOpen: true },
+					el(
+						Button,
+						{ isSecondary: true, onClick: function () { setBulkOpen( true ); } },
+						'Bulk Add'
+					),
+					field.settings.choices.map( function ( choice, idx ) {
+						return el(
+							'div',
+							{ key: idx, className: 'msfbp-choice-row' },
+							el( TextControl, {
+								label: 'Label',
+								value: choice.label,
+								onChange: function ( v ) {
+									const choices = field.settings.choices.slice();
+									choices[ idx ] = Object.assign( {}, choices[ idx ], { label: v } );
+									updateSettings( 'choices', choices );
+								},
+							} ),
+							el( TextControl, {
+								label: 'Value',
+								value: choice.value,
+								onChange: function ( v ) {
+									const choices = field.settings.choices.slice();
+									choices[ idx ] = Object.assign( {}, choices[ idx ], { value: v } );
+									updateSettings( 'choices', choices );
+								},
+							} ),
+							el(
+								Button,
+								{
+									isLink: true,
+									isDestructive: true,
+									onClick: function () {
+										updateSettings(
+											'choices',
+											field.settings.choices.filter( function ( c, i ) {
+												return i !== idx;
+											} )
+										);
+									},
+								},
+								'Remove'
+							)
+						);
+					} ),
+					el(
+						Button,
+						{
+							isSecondary: true,
+							onClick: function () {
+								updateSettings(
+									'choices',
+									field.settings.choices.concat( [ { label: 'Option', value: 'option' } ] )
+								);
+							},
+						},
+						'Add Choice'
+					)
+				),
+			field.type === 'calculation' &&
+				el( TextareaControl, {
+					label: 'Formula (use {field:slug} tokens)',
+					value: field.settings.formula || '',
+					onChange: function ( v ) {
+						updateSettings( 'formula', v );
+					},
+				} ),
+			el( ConditionalBuilder, {
+				value: field.settings.conditional,
+				onChange: function ( val ) {
+					updateSettings( 'conditional', val );
+				},
+			} ),
+			el( ChoiceBulkModal, {
+				isOpen: bulkOpen,
+				onClose: function () { setBulkOpen( false ); },
+				onApply: function ( choices ) {
+					updateSettings( 'choices', choices );
+					setBulkOpen( false );
+				},
+			} )
 		);
 	};
 
 	const BuilderApp = () => {
-		const container = document.getElementById( 'msfbp-builder-root' );
-		const template = container?.dataset?.formTemplate ? JSON.parse( container.dataset.formTemplate ) : {};
+		const sample = MSFBP_Admin.sample || {};
 		const baseForm = {
-			id: template.id || 0,
-			name: template.name || 'Untitled Form',
-			status: template.status || 'draft',
-			settings: template.settings || {},
-			fields: template.fields || [],
+			id: sample.id || 0,
+			name: sample.name || 'Untitled Form',
+			status: sample.status || 'draft',
+			settings: sample.settings || {},
+			fields: sample.fields || [],
 		};
 
 		const [ form, setForm ] = useState( baseForm );
 		const [ notice, setNotice ] = useState( '' );
 
-		const addField = () => setForm( { ...form, fields: [ ...form.fields, defaultField() ] } );
+		const addField = () => setForm( Object.assign( {}, form, { fields: form.fields.concat( [ defaultField() ] ) } ) );
 		const save = () => {
 			apiFetch( {
-				path: MSFBP_Admin.restUrl + '/forms',
+				url: MSFBP_Admin.restUrl + '/forms',
 				method: 'POST',
 				headers: { 'X-WP-Nonce': MSFBP_Admin.restNonce },
 				body: JSON.stringify( form ),
-			} ).then( ( res ) => {
-				setForm( { ...form, id: res.id } );
+			} ).then( function ( res ) {
+				setForm( Object.assign( {}, form, { id: res.id } ) );
 				setNotice( 'Form saved.' );
-			} ).catch( () => setNotice( 'Error saving form.' ) );
+			} ).catch( function () {
+				setNotice( 'Error saving form.' );
+			} );
 		};
 
-		return (
-			<div className="msfbp-builder">
-				{ notice && <Notice status="success" onRemove={ () => setNotice( '' ) }>{ notice }</Notice> }
-				<TextControl label="Form Name" value={ form.name } onChange={ ( v ) => setForm( { ...form, name: v } ) } />
-				<div className="msfbp-fields">
-					{ form.fields.map( ( field, idx ) => (
-						<FieldEditor
-							key={ field.id }
-							field={ field }
-							onChange={ ( updated ) => {
-								const next = [ ...form.fields ];
-								next[ idx ] = updated;
-								setForm( { ...form, fields: next } );
-							} }
-							onRemove={ () => setForm( { ...form, fields: form.fields.filter( ( f ) => f.id !== field.id ) } ) }
-							onMoveUp={ () => {
-								if ( idx === 0 ) return;
-								const next = [ ...form.fields ];
-								[ next[ idx - 1 ], next[ idx ] ] = [ next[ idx ], next[ idx - 1 ] ];
-								setForm( { ...form, fields: next } );
-							} }
-							onMoveDown={ () => {
-								if ( idx === form.fields.length - 1 ) return;
-								const next = [ ...form.fields ];
-								[ next[ idx + 1 ], next[ idx ] ] = [ next[ idx ], next[ idx + 1 ] ];
-								setForm( { ...form, fields: next } );
-							} }
-						/>
-					) ) }
-				</div>
-				<div className="msfbp-actions">
-					<Button isSecondary onClick={ addField }>Add Field</Button>
-					<Button isPrimary onClick={ save }>Save Form</Button>
-				</div>
-			</div>
+		return el(
+			'div',
+			{ className: 'msfbp-builder' },
+			notice &&
+				el( Notice, { status: 'success', onRemove: function () { setNotice( '' ); } }, notice ),
+			el( TextControl, {
+				label: 'Form Name',
+				value: form.name,
+				onChange: function ( v ) {
+					setForm( Object.assign( {}, form, { name: v } ) );
+				},
+			} ),
+			el(
+				'div',
+				{ className: 'msfbp-fields' },
+				form.fields.map( function ( field, idx ) {
+					return el( FieldEditor, {
+						key: field.id,
+						field: field,
+						onChange: function ( updated ) {
+							const next = form.fields.slice();
+							next[ idx ] = updated;
+							setForm( Object.assign( {}, form, { fields: next } ) );
+						},
+						onRemove: function () {
+							setForm( Object.assign( {}, form, { fields: form.fields.filter( function ( f ) { return f.id !== field.id; } ) } ) );
+						},
+						onMoveUp: function () {
+							if ( idx === 0 ) {
+								return;
+							}
+							const next = form.fields.slice();
+							const tmp = next[ idx - 1 ];
+							next[ idx - 1 ] = next[ idx ];
+							next[ idx ] = tmp;
+							setForm( Object.assign( {}, form, { fields: next } ) );
+						},
+						onMoveDown: function () {
+							if ( idx === form.fields.length - 1 ) {
+								return;
+							}
+							const next = form.fields.slice();
+							const tmp = next[ idx + 1 ];
+							next[ idx + 1 ] = next[ idx ];
+							next[ idx ] = tmp;
+							setForm( Object.assign( {}, form, { fields: next } ) );
+						},
+					} );
+				} )
+			),
+			el(
+				'div',
+				{ className: 'msfbp-actions' },
+				el( Button, { isSecondary: true, onClick: addField }, 'Add Field' ),
+				el( Button, { isPrimary: true, onClick: save }, 'Save Form' )
+			)
 		);
 	};
 
-	document.addEventListener( 'DOMContentLoaded', () => {
+	document.addEventListener( 'DOMContentLoaded', function () {
 		const root = document.getElementById( 'msfbp-builder-root' );
 		if ( root ) {
-			render( <BuilderApp />, root );
+			render( el( BuilderApp, null ), root );
 		}
 	} );
-} )( window.wp, wp.apiFetch );
+}( window.wp, wp.apiFetch ));
